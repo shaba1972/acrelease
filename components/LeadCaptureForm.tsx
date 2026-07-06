@@ -3,6 +3,7 @@ import { LeadFormData, AIAssessmentResult } from "../types";
 import { LAND_TYPES, INTENDED_USES, STATES_AND_REGIONS } from "../data";
 import AIAssessmentCard from "./AIAssessmentCard";
 import Turnstile from "react-turnstile";
+import apiFetch from "../api";
 import {
   Sparkles,
   MapPin,
@@ -101,7 +102,7 @@ export default function LeadCaptureForm({ onSuccessSubmit }: LeadCaptureFormProp
 
     const loadSiteKey = async () => {
       try {
-        const response = await fetch("/api/security/turnstile-site-key");
+        const response = await apiFetch("/api/security/turnstile-site-key");
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok || !data.siteKey) {
@@ -304,7 +305,7 @@ export default function LeadCaptureForm({ onSuccessSubmit }: LeadCaptureFormProp
     setError(null);
 
     try {
-      const response = await fetch("/api/analyze-requirements", {
+      const response = await apiFetch("/api/analyze-requirements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -371,7 +372,7 @@ export default function LeadCaptureForm({ onSuccessSubmit }: LeadCaptureFormProp
     setError(null);
 
     try {
-      const response = await fetch("/api/leads", {
+      const response = await apiFetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, turnstileToken }),

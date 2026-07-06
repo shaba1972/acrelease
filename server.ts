@@ -22,6 +22,29 @@ const TURNSTILE_ACTION = "lead_capture";
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "10mb" }));
 
+// Allow cross-origin requests from the frontend. Set FRONTEND_ORIGIN in production.
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || (process.env.NODE_ENV !== "production" ? "*" : "");
+
+app.use((req, res, next) => {
+  const origin = String(req.headers.origin || "");
+
+  if (FRONTEND_ORIGIN === "*") {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  } else if (FRONTEND_ORIGIN && origin && origin === FRONTEND_ORIGIN) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
 const leadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,

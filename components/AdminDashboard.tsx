@@ -1,4 +1,5 @@
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import apiFetch from "../api";
 import {
   ArrowRight,
   BarChart3,
@@ -263,7 +264,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setFeedbackMessage(null);
-      const response = await fetch("/api/admin/leads", {
+      const response = await apiFetch("/api/admin/leads", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -403,7 +404,7 @@ export default function AdminDashboard() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/admin/login", {
+      const response = await apiFetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(loginForm),
@@ -432,7 +433,7 @@ export default function AdminDashboard() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/leads/${leadId}`, {
+      const response = await apiFetch(`/api/admin/leads/${leadId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
