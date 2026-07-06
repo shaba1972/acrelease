@@ -1,4 +1,4 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || "";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").trim();
 
 export function apiUrl(path: string) {
   if (!path) return path;

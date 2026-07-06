@@ -1,5 +1,5 @@
-const heroIllustration = "/src/assets/images/hero_land_illustration_1782588056023.jpg";
-import { Compass, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Compass, CheckCircle2 } from "lucide-react";
+import heroIllustration from "../assets/images/hero-land-handshake.png";
 
 interface HeroSectionProps {
   onCtaClick: () => void;
@@ -79,7 +79,7 @@ export default function HeroSection({ onCtaClick }: HeroSectionProps) {
               <div className="relative bg-white/60 backdrop-blur-md p-3 rounded-[2.5rem] shadow-xl border border-white/60 overflow-hidden">
                 <img
                   src={heroIllustration}
-                  alt="Premium Temporary Land Use Illustration (farming, logistics, pasturing, events)"
+                  alt="FieldLease advisor and landowner confirming a farm lease"
                   referrerPolicy="no-referrer"
                   className="w-full h-auto object-cover rounded-[2rem] shadow-inner transition-transform duration-500 hover:scale-[1.02]"
                 />

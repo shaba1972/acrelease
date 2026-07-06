@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { LeadFormData, AIAssessmentResult } from "../types";
 import { LAND_TYPES, INTENDED_USES, STATES_AND_REGIONS } from "../data";
 import AIAssessmentCard from "./AIAssessmentCard";
-import Turnstile from "react-turnstile";
+import Turnstile, { type BoundTurnstileObject } from "react-turnstile";
 import apiFetch from "../api";
 import {
   Sparkles,
@@ -32,31 +32,10 @@ interface LeadCaptureFormProps {
   onSuccessSubmit?: (leadId: string) => void;
 }
 
-interface TurnstileRenderOptions {
-  sitekey: string;
-  action?: string;
-  callback?: (token: string) => void;
-  "expired-callback"?: () => void;
-  "error-callback"?: () => void;
-  size?: "normal" | "compact" | "flexible";
-  theme?: "light" | "dark" | "auto";
-}
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (container: HTMLElement, options: TurnstileRenderOptions) => string;
-      reset: (widgetId?: string) => void;
-      remove: (widgetId?: string) => void;
-    };
-  }
-}
-
 const SIZES_PILLS = ["1-10 plot", "1-2 Acres", "5-10 Acres", "25-50 Acres", "100+ Acres", "10,000 sqft"];
 const DURATIONS_PILLS = ["6 Months", "1 Year", "2-3 Years", "5+ Years", "Flexible Term"];
 const BUDGETS_PILLS = ["Under ₦1m/yr", "₦1m-₦5m/yr", "₦5m+/yr", "Flexible budget"];
 const INFRASTRUCTURE_TAGS = ["Water Source", "Grid Power Connection", "Fenced Enclosure", "Heavy Truck Access", "High road proximity"];
-const TURNSTILE_SCRIPT_ID = "fieldlease-turnstile-script";
 const TURNSTILE_ACTION = "lead_capture";
 
 export default function LeadCaptureForm({ onSuccessSubmit }: LeadCaptureFormProps) {
@@ -87,14 +66,11 @@ export default function LeadCaptureForm({ onSuccessSubmit }: LeadCaptureFormProp
   const [turnstileSiteKey, setTurnstileSiteKey] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileStatus, setTurnstileStatus] = useState<"loading" | "ready" | "unavailable">("loading");
-  const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
-  const turnstileWidgetIdRef = useRef<string | null>(null);
+  const turnstileRef = useRef<BoundTurnstileObject | null>(null);
 
   const resetTurnstile = () => {
     setTurnstileToken("");
-    if (turnstileWidgetIdRef.current && window.turnstile) {
-      window.turnstile.reset(turnstileWidgetIdRef.current);
-    }
+    turnstileRef.current?.reset();
   };
 
   useEffect(() => {
@@ -130,66 +106,10 @@ export default function LeadCaptureForm({ onSuccessSubmit }: LeadCaptureFormProp
   }, []);
 
   useEffect(() => {
-    if (turnstileStatus !== "ready" || !turnstileSiteKey || currentStep !== 4 || isSubmitted) return;
-
-    let canceled = false;
-    let scriptElement: HTMLScriptElement | null = document.getElementById(TURNSTILE_SCRIPT_ID) as HTMLScriptElement | null;
-
-    const renderTurnstile = () => {
-      if (canceled || !window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
-
-      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-        sitekey: turnstileSiteKey,
-        action: TURNSTILE_ACTION,
-        size: "flexible",
-        theme: "light",
-        callback: (token) => {
-          setTurnstileToken(token);
-          setError(null);
-          setValidationError(null);
-        },
-        "expired-callback": () => {
-          setTurnstileToken("");
-          setValidationError("Please complete the spam protection check again.");
-        },
-        "error-callback": () => {
-          setTurnstileToken("");
-          setTurnstileStatus("unavailable");
-          setError("Spam protection could not load. Please refresh before submitting.");
-        },
-      });
-    };
-
-    if (window.turnstile) {
-      renderTurnstile();
-    } else if (scriptElement) {
-      scriptElement.addEventListener("load", renderTurnstile);
-    } else {
-      scriptElement = document.createElement("script");
-      scriptElement.id = TURNSTILE_SCRIPT_ID;
-      scriptElement.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      scriptElement.async = true;
-      scriptElement.defer = true;
-      scriptElement.addEventListener("load", renderTurnstile);
-      scriptElement.addEventListener("error", () => {
-        if (!canceled) {
-          setTurnstileStatus("unavailable");
-          setError("Spam protection could not load. Please refresh before submitting.");
-        }
-      });
-      document.head.appendChild(scriptElement);
-    }
-
-    return () => {
-      canceled = true;
-      scriptElement?.removeEventListener("load", renderTurnstile);
-      if (turnstileWidgetIdRef.current && window.turnstile) {
-        window.turnstile.remove(turnstileWidgetIdRef.current);
-        turnstileWidgetIdRef.current = null;
-        setTurnstileToken("");
-      }
-    };
-  }, [currentStep, isSubmitted, turnstileSiteKey, turnstileStatus]);
+    if (currentStep === 4 && !isSubmitted) return;
+    turnstileRef.current = null;
+    setTurnstileToken("");
+  }, [currentStep, isSubmitted]);
 
   // Handle Input Changes
   const handleInputChange = (
@@ -1039,7 +959,39 @@ export default function LeadCaptureForm({ onSuccessSubmit }: LeadCaptureFormProp
                     </div>
                   )}
                   {turnstileStatus === "ready" && (
-                    <div ref={turnstileContainerRef} className="w-full min-w-[300px] flex justify-center" />
+                    <Turnstile
+                      sitekey={turnstileSiteKey}
+                      action={TURNSTILE_ACTION}
+                      size="flexible"
+                      theme="light"
+                      retry="auto"
+                      refreshExpired="auto"
+                      className="w-full min-w-[300px] flex justify-center"
+                      onLoad={(_widgetId, boundTurnstile) => {
+                        turnstileRef.current = boundTurnstile;
+                      }}
+                      onVerify={(token, boundTurnstile) => {
+                        turnstileRef.current = boundTurnstile;
+                        setTurnstileToken(token);
+                        setError(null);
+                        setValidationError(null);
+                      }}
+                      onExpire={() => {
+                        setTurnstileToken("");
+                        setValidationError("Please complete the spam protection check again.");
+                      }}
+                      onError={(turnstileError) => {
+                        console.error("Turnstile error:", turnstileError);
+                        setTurnstileToken("");
+                        setTurnstileStatus("unavailable");
+                        setError("Spam protection could not load. Please refresh before submitting.");
+                      }}
+                      onUnsupported={() => {
+                        setTurnstileToken("");
+                        setTurnstileStatus("unavailable");
+                        setError("This browser does not support spam protection. Please try another browser.");
+                      }}
+                    />
                   )}
                 </div>
               </div>
